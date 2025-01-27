@@ -30,7 +30,7 @@ RUN pip3 install flywheel-gear-toolkit && \
 
 # copy ctx fix to freesurfer python scripts
 RUN mv /usr/local/freesurfer/bin/recon-all-clinical.sh /usr/local/freesurfer/bin/DEPRICATED_recon-all-clinical.sh
-RUN cp ./recon-all-clinical-fix.sh /usr/local/freesurfer/bin/recon-all-clinical.sh
+RUN cp ./app/recon-all-clinical-fix.sh /usr/local/freesurfer/bin/recon-all-clinical.sh
 
 # Configure entrypoint
 RUN bash -c 'chmod +rx $FLYWHEEL/run.py' && \
