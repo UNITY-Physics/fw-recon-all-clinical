@@ -22,8 +22,8 @@ def get_age(session, dicom_header):
     age = None
 
     # Check if age is in custom session info
-    if 'age_months' in session.info:
-        age = session.info['age_months']
+    if 'age_at_scan_months' in session.info:
+        age = session.info['age_at_scan_months']
         age_source = 'custom_info'
         print(age, age_source)
     else:
