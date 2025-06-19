@@ -8,6 +8,15 @@ import shutil
 
 #  Module to identify the correct template use for the subject VBM analysis based on age at scan
 #  Need to get subject identifiers from inside running container in order to find the correct template from the SDK
+def find_gear_version(analyses, filename):
+    for asys in analyses:
+        for file in asys.files:
+            if file.name == filename:
+                if 'gambas' in asys.label:
+                    return asys.label.split(' ')[0]
+                elif 'mrr' in asys.label:
+                    return f"{file.gear_info.name}/{file.gear_info.version}"
+    return None
 
 def housekeeping(context):
 
@@ -50,66 +59,74 @@ def housekeeping(context):
             filename_without_extension = filename.split('.')[0]
             no_white_spaces = filename_without_extension.replace(" ", "")
             # no_white_spaces = filename.replace(" ", "")
-            cleaned_string = re.sub(r'[^a-zA-Z0-9]', '_', no_white_spaces)
-            cleaned_string = cleaned_string.rstrip('_') # remove trailing underscore
+            acquisition_cleaned = re.sub(r'[^a-zA-Z0-9]', '_', no_white_spaces)
+            acquisition_cleaned = acquisition_cleaned.rstrip('_') # remove trailing underscore
 
-    print("cleaned_string: ", cleaned_string)
+            gear_v = find_gear_version(session.analyses, filename)
+
+            if not gear_v:
+                for acq in session.acquisitions():
+                    acq = acq.reload()
+                    gear_v = find_gear_version(acq.analyses, filename)
+                    if gear_v:
+                        break
+
 
     # -------------------  Get the subject age & matching template  -------------------  #
 
     # get the T2w axi dicom acquisition from the session
     # Should contain the DOB in the dicom header
     # Some projects may have DOB removed, but may have age at scan in the subject container
-    age = 'NA'
-    PatientSex = 'NA'
+    
     for acq in session_container.acquisitions.iter():
         # print(acq.label)
         acq = acq.reload()
+        age = 'NA'
+        sex = 'NA'
+
+        
         if 'T2' in acq.label and 'AXI' in acq.label and 'Segmentation' not in acq.label and 'Align' not in acq.label: 
             for file_obj in acq.files: # get the files in the acquisition
                 # Screen file object information & download the desired file
                 if file_obj['type'] == 'dicom':
+                        dicom_header = fw._fw.get_acquisition_file_info(acq.id, file_obj.name)
+                        
+                        sex = dicom_header.info.get("PatientSex",session.info.get('sex_at_birth', "NA"))
+                        dob = dicom_header.info.get('PatientBirthDate', None)
+                        series_date = dicom_header.get('SeriesDate', None)
+                        scannerSoftwareVersion = dicom_header.info.get('SoftwareVersions', None)
+                        
+                        if session.info.get('age_at_scan_months', 0) != 0:
+                            print("Checking session info for age at scan in months...")
+                            age = session.info.get('age_at_scan_months', 0)
+
+                        elif dob != None and series_date != None:
+                            # Calculate age at scan
+                            # Calculate the difference in months
+                            series_dt = datetime.strptime(series_date, '%Y%m%d')
+                            dob_dt = datetime.strptime(dob, '%Y%m%d')
+
+                            age = (series_dt.year - dob_dt.year) * 12 + (series_dt.month - dob_dt.month)
+
+                            # Adjust if the day in series_dt is earlier than the day in dob_dt
+                            if series_dt.day < dob_dt.day:
+                                age -= 1
+                        
+                        else:
+                            print("No DOB in dicom header or age in session info! Trying PatientAge from dicom...")
+                            # Need to drop the 'D' from the age and convert to int
+                            age = re.sub('\D', '', dicom_header.info.get('PatientAge', "0"))
+                           
+                        if age <= 0 or age > 1200:  # negative, 0 or 100 years
+                            age = 'NA'
+                            print("No age at scan - skipping")
+                            exit(1)
                     
-                    dicom_header = fw._fw.get_acquisition_file_info(acq.id, file_obj.name)
-                    try:
-                        PatientSex = dicom_header.info["PatientSex"]
-                    except:
-                        PatientSex = "NA"
-                        continue
-                    print("PatientSex: ", PatientSex)
-
-                    if 'PatientBirthDate' in dicom_header.info:
-                        # Get dates from dicom header
-                        dob = dicom_header.info['PatientBirthDate']
-                        seriesDate = dicom_header.info['SeriesDate']
-                        # Calculate age at scan
-                        age = (datetime.strptime(seriesDate, '%Y%m%d')) - (datetime.strptime(dob, '%Y%m%d'))
-                        age = age.days
-                    elif session.age != None: 
-                        # 
-                        print("Checking session infomation label...")
-                        # print("session.age: ", session.age) 
-                        age = int(session.age / 365 / 24 / 60 / 60) # This is in seconds
-                    elif 'PatientAge' in dicom_header.info:
-                        print("No DOB in dicom header or age in session info! Trying PatientAge from dicom...")
-                        age = dicom_header.info['PatientAge']
-                        # Need to drop the 'D' from the age and convert to int
-                        age = re.sub('\D', '', age)
-                        age = int(age)
-                    else:
-                        print("No age at scan in session info label! Ask PI...")
-                        age = 0
-
-                    if age == 0:
-                        print("No age at scan - skipping")
-                        exit(1)
-                    # Make sure age is positive
-                    elif age < 0:
-                        age = age * -1
-                    print("age: ", age)
+                        print("Age: ", age)
+                        print("Sex: ", sex)
     
     # assign values to lists. 
-    data = [{'subject': subject_label, 'session': session_label, 'age': age, 'sex': PatientSex, 'acquisition': cleaned_string }]  
+    data = [{'subject': subject_label, 'session': session_label, 'age': age, 'sex': sex, 'acquisition': acquisition_cleaned, "input_gear_v": gear_v, "scannerSoftwareVersion": scannerSoftwareVersion }]  
     # Creates DataFrame.  
     demo = pd.DataFrame(data)
 
@@ -126,7 +143,7 @@ def housekeeping(context):
     # smush the data together
     frames = [demo, lh_thickness, rh_thickness]
     df = pd.concat(frames, axis=1)
-    out_name = f"{cleaned_string}_thickness.csv"
+    out_name = f"{acquisition_cleaned}_thickness.csv"
     outdir = ('/flywheel/v0/output/' + out_name)
     df.to_csv(outdir)
 
@@ -139,7 +156,7 @@ def housekeeping(context):
     # smush the data together
     frames = [demo, vol_data]
     df = pd.concat(frames, axis=1)
-    out_name = f"{cleaned_string}_volume.csv"
+    out_name = f"{acquisition_cleaned}_volume.csv"
     outdir = ('/flywheel/v0/output/' + out_name)
     df.to_csv(outdir)
 
@@ -152,7 +169,7 @@ def housekeeping(context):
     # smush the data together
     frames = [demo, qc_data]
     df = pd.concat(frames, axis=1)
-    out_name = f"{cleaned_string}_qc.csv"
+    out_name = f"{acquisition_cleaned}_qc.csv"
     outdir = ('/flywheel/v0/output/' + out_name)
     df.to_csv(outdir)
     
@@ -162,8 +179,8 @@ def housekeeping(context):
     aseg_path = '/flywheel/v0/work/aparc+aseg.nii.gz'
 
     # New file name with label
-    SR_output = f"/flywheel/v0/output/{cleaned_string}_synthSR.nii.gz"
-    aseg_output = f"/flywheel/v0/output/{cleaned_string}_aparc+aseg.nii.gz"
+    SR_output = f"/flywheel/v0/output/{acquisition_cleaned}_synthSR.nii.gz"
+    aseg_output = f"/flywheel/v0/output/{acquisition_cleaned}_aparc+aseg.nii.gz"
 
     shutil.copy(synthSR_path, SR_output)
     shutil.copy(aseg_path, aseg_output)
@@ -179,4 +196,4 @@ def housekeeping(context):
     # # Execute the bash script
     # subprocess.run(qc_command, shell=True)
 
-    print("Demographics: ", subject_label, session_label, age, PatientSex)
+    print("Demographics: ", subject_label, session_label, age, sex)
