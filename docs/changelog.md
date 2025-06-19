@@ -1,4 +1,14 @@
 # Changelog
+
+27/01/2025
+Version 0.4.1
+- Added surface area as output
+- Updated catching age for output
+    - starts with age_months from custom-info
+    - if not found, then age from dicom header
+    - Harmonised to months
+- fixed regex bug that changed '-' in BIDS name to '_' in output
+
 14/01/2025
 Version 0.4.0
 - Added fix for potential `recon-all` error

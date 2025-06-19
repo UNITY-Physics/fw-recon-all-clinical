@@ -106,7 +106,11 @@ export SUBJECTS_DIR=$WORKDIR
 aparcstats2table --subjects $base_filename --hemi lh --meas thickness --parc=aparc --tablefile=$WORKDIR/aparc_lh.csv
 aparcstats2table --subjects $base_filename --hemi rh --meas thickness --parc=aparc --tablefile=$WORKDIR/aparc_rh.csv
 
-  
+# Step 5: Extract area measures
+aparcstats2table --subjects $base_filename --hemi lh --meas area --parc=aparc --tablefile=$WORKDIR/aparc_area_lh.csv
+aparcstats2table --subjects $base_filename --hemi rh --meas area --parc=aparc --tablefile=$WORKDIR/aparc_area_rh.csv
+
+
 # Handle Exit status
 if [[ $recon_all_clinical_exit_status == 0 ]]; then
   echo -e "${CONTAINER} Success!"
