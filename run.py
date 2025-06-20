@@ -8,7 +8,9 @@ import sys
 from flywheel_gear_toolkit import GearToolkitContext
 from app.command_line import exec_command
 from app.parser import parse_config
-from utils.curate_output import housekeeping
+from shared.utils.curate_output import demo
+from utils.join_data import housekeeping
+
 
 # Add top-level package directory to sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -33,7 +35,8 @@ def main(context: GearToolkitContext) -> None:
 
     # Add demographic data to the output
     print("concatenating demographics...")
-    housekeeping(context)
+    demographics = demo (context)
+    housekeeping(demographics)
 
 # Only execute if file is run as main, not when imported by another module
 if __name__ == "__main__":  # pragma: no cover

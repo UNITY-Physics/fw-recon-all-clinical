@@ -4,6 +4,7 @@ FROM nialljb/freesurfer-centos9:0.0.1
 # Setup environment for Docker image
 ENV HOME=/root/
 ENV FLYWHEEL="/flywheel/v0"
+ENV PYTHONPATH="/flywheel/v0:$PYTHONPATH"
 WORKDIR $FLYWHEEL
 RUN mkdir -p $FLYWHEEL/input
 
@@ -31,6 +32,8 @@ RUN pip3 install flywheel-gear-toolkit && \
 # copy ctx fix to freesurfer python scripts
 RUN mv /usr/local/freesurfer/bin/recon-all-clinical.sh /usr/local/freesurfer/bin/DEPRICATED_recon-all-clinical.sh
 RUN cp ./app/recon-all-clinical-fix.sh /usr/local/freesurfer/bin/recon-all-clinical.sh
+
+
 
 # Configure entrypoint
 RUN bash -c 'chmod +rx $FLYWHEEL/run.py' && \
