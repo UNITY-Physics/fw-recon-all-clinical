@@ -72,3 +72,9 @@ The structure of this container is how the Flywheel instance sees it so now can 
 
 - Any references now can be ammended
 - The algorithm can now be updated with the required inputs 
+
+## If you want to initialize the submodules in the gear:
+git submodule update --init --recursive
+
+### If you want to update the gear with the latest changes from submodules:
+git submodule update --remote --merge
