@@ -5,7 +5,8 @@ IMAGE=flywheel/recon-all-clinical:$1
 LOG=recon-all-clinical-$1-$2
 
 # Command:
-docker run -it --rm --entrypoint bash\
+docker run -it --rm \
+	--platform linux/amd64 \
 	-v $3/unity/fw-gears/${GEAR}/app/:/flywheel/v0/app\
 	-v $3/unity/fw-gears/${GEAR}/utils:/flywheel/v0/utils\
 	-v $3/unity/fw-gears/${GEAR}/shared/utils:/flywheel/v0/shared/utils\

@@ -20,7 +20,8 @@ RUN dnf update -y && \
     dnf install -y tcsh && \
     dnf install -y hostname && \
     dnf install -y zip && \
-    dnf clean all
+    dnf clean all && \
+    apt-get install parallel
 
 RUN pip3 install flywheel-gear-toolkit && \
     pip3 install flywheel-sdk && \
@@ -30,7 +31,7 @@ RUN pip3 install flywheel-gear-toolkit && \
     cp license.txt /usr/local/freesurfer/.license
 
 # copy ctx fix to freesurfer python scripts
-RUN mv /usr/local/freesurfer/bin/recon-all-clinical.sh /usr/local/freesurfer/bin/DEPRICATED_recon-all-clinical.sh
+RUN mv /usr/local/freesurfer/bin/recon-all-clinical.sh /usr/local/freesurfer/bin/DEPRECATED_recon-all-clinical.sh
 RUN cp ./app/recon-all-clinical-fix.sh /usr/local/freesurfer/bin/recon-all-clinical.sh
 
 

@@ -31,6 +31,7 @@ def main(context: GearToolkitContext) -> None:
     command = "/flywheel/v0/app/main.sh"
     # Add the input path and age to the command
     command = f"{command} {subject_label} {session_label} {input_label}"
+    print(command)
     exec_command(command,shell=True,cont_output=True)
 
     # Add demographic data to the output

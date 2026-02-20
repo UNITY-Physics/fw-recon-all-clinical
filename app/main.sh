@@ -22,7 +22,7 @@ source /usr/local/freesurfer/SetUpFreeSurfer.sh
 echo "permissions"
 ls -ltra /flywheel/v0/
 
-mkdir $FLYWHEEL_BASE/work
+mkdir -p $FLYWHEEL_BASE/work
 chmod 777 $FLYWHEEL_BASE/work
 ##############################################################################
 # Parse configuration
@@ -78,41 +78,43 @@ fi
 # Set initial exit status
 recon_all_clinical_exit_status=0
 
-
 if [[ $config_rob == 'true' ]]; then
   robust='--robust'
 fi
 
-# Run recon-all-clinical with options
-if [[ -e $input_file ]]; then
-  echo "Running recon-all-clinical..."
+echo "Running recon-all-clinical..."
+tcsh /usr/local/freesurfer/bin/recon-all-clinical.sh $input_file $base_filename 4 $WORKDIR
+recon_all_clinical_exit_status=$?
+
+
+
+
+# # Run recon-all-clinical with options
+# if [[ -e $input_file ]]; then
+#   echo "Running recon-all-clinical..."
   
-  tcsh /usr/local/freesurfer/bin/recon-all-clinical.sh $input_file $base_filename 4 $WORKDIR  
-  recon_all_clinical_exit_status=$?
-fi
+#   tcsh /usr/local/freesurfer/bin/recon-all-clinical.sh $input_file $base_filename 4 $WORKDIR
+#   recon_all_clinical_exit_status=$?
+# fi
 
 # Step 3: Copy output files to the output directory
 #mri_convert $WORKDIR/$base_filename/mri/synthseg.mgz $OUTPUT_DIR/synthseg.nii
-cp $WORKDIR/$base_filename/stats/synthseg.vol.csv $WORKDIR/synthseg.vol.csv
-cp $WORKDIR/$base_filename/stats/synthseg.qc.csv $WORKDIR/synthseg.qc.csv
-mri_convert --out_orientation RAS $WORKDIR/$base_filename/mri/synthSR.mgz $WORKDIR/synthSR.nii.gz
-mri_convert --out_orientation RAS $WORKDIR/$base_filename/mri/aparc+aseg.mgz $WORKDIR/aparc+aseg.nii.gz
-zip -r $OUTPUT_DIR/$base_filename.zip $WORKDIR/$base_filename
+##############################################################################
+# Post-processing: only run if recon-all-clinical succeeded
 
-
-# Step 4: Extract cortical thickness measures
-# Set SUBJECTS_DIR to the work directory
-export SUBJECTS_DIR=$WORKDIR
-aparcstats2table --subjects $base_filename --hemi lh --meas thickness --parc=aparc --tablefile=$WORKDIR/aparc_lh.csv
-aparcstats2table --subjects $base_filename --hemi rh --meas thickness --parc=aparc --tablefile=$WORKDIR/aparc_rh.csv
-
-# Step 5: Extract area measures
-aparcstats2table --subjects $base_filename --hemi lh --meas area --parc=aparc --tablefile=$WORKDIR/aparc_area_lh.csv
-aparcstats2table --subjects $base_filename --hemi rh --meas area --parc=aparc --tablefile=$WORKDIR/aparc_area_rh.csv
-
-
-# Handle Exit status
 if [[ $recon_all_clinical_exit_status == 0 ]]; then
+  cp $WORKDIR/$base_filename/stats/synthseg.vol.csv $WORKDIR/synthseg.vol.csv
+  cp $WORKDIR/$base_filename/stats/synthseg.qc.csv $WORKDIR/synthseg.qc.csv
+  mri_convert --out_orientation RAS $WORKDIR/$base_filename/mri/synthSR.mgz $WORKDIR/synthSR.nii.gz
+  mri_convert --out_orientation RAS $WORKDIR/$base_filename/mri/aparc+aseg.mgz $WORKDIR/aparc+aseg.nii.gz
+  zip -r $OUTPUT_DIR/$base_filename.zip $WORKDIR/$base_filename
+
+  export SUBJECTS_DIR=$WORKDIR
+  aparcstats2table --subjects $base_filename --hemi lh --meas thickness --parc=aparc --tablefile=$WORKDIR/aparc_lh.csv
+  aparcstats2table --subjects $base_filename --hemi rh --meas thickness --parc=aparc --tablefile=$WORKDIR/aparc_rh.csv
+  aparcstats2table --subjects $base_filename --hemi lh --meas area --parc=aparc --tablefile=$WORKDIR/aparc_area_lh.csv
+  aparcstats2table --subjects $base_filename --hemi rh --meas area --parc=aparc --tablefile=$WORKDIR/aparc_area_rh.csv
+
   echo -e "${CONTAINER} Success!"
   exit 0
 else
