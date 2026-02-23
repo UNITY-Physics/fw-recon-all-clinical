@@ -1,5 +1,11 @@
 #! /bin/tcsh -f
 
+set fwhmlist = ( 0 5 10 15 20 25 )
+set hemilist = (lh rh)
+set measurelist = ( thickness area area.pial curv sulc \
+                    white.preaparc.K white.preaparc.H jacobian_white volume )
+set target = fsaverage
+
 set tcsh61706 = (`tcsh --version | grep "6\.17\.06"`)
 if ("$tcsh61706" != "") then
   echo ""
@@ -111,6 +117,7 @@ if (! -d $SUBJECTS_DIR ) then
   echo " "
   exit 1
 endif
+set subjid = $SNAME
 
 # Make sure that the (T1) hippocampal subfields are not running already for this subject
 set IsRunningFile = ${SUBJECTS_DIR}/${SNAME}/scripts/IsRunning.lh+rh
@@ -468,6 +475,51 @@ $cmd |& tee -a $LogFile
 set cmd="mris_volmask --aseg_name aseg.presurf --label_left_white 2 --label_left_ribbon 3 --label_right_white 41 --label_right_ribbon 42 --save_ribbon $SNAME --threads $THREADS"
 $cmd |& tee -a $LogFile
 
+cd ../surf
+set cmd = "mris_convert --volume $SNAME lh $SUBJECTS_DIR/$SNAME/surf/lh.volume"
+$cmd |& tee -a $LogFile
+set cmd = "mris_convert --volume $SNAME rh $SUBJECTS_DIR/$SNAME/surf/rh.volume"
+$cmd |& tee -a $LogFile
+set cmd = "pctsurfcon --s $SNAME"
+$cmd |& tee -a $LogFile
+
+foreach hemi ( $hemilist )
+echo $hemi
+    foreach measure ( $measurelist )
+echo $measure
+set MeasFile = ( ${hemi}.${measure} )
+
+      set MeasFile = ` basename ${MeasFile} .mgz `
+      set MeasFile = ( $MeasFile.$target )
+set cmd=( mris_preproc \
+          --s ${subjid} \
+          --hemi ${hemi} \
+          --meas ${measure} \
+          --target ${target} \
+          --out ${MeasFile}.mgh )
+
+$cmd
+foreach fwhm ( $fwhmlist )
+echo  $fwhm
+set OutFile=( ${hemi}.${measure} )
+
+        set OutFile=`basename ${OutFile} .mgz`
+        set OutFile=( ${OutFile}.fwhm${fwhm}.${target} )
+
+set cmd=( mri_surf2surf --prune\
+            --s ${target} \
+            --hemi ${hemi} \
+            --fwhm ${fwhm} \
+            --sval ${MeasFile}.mgh \
+            --tval ${OutFile}.mgh )
+
+$cmd
+	end
+    end
+  end
+
+cd ../mri
+
 # Refine SynthSR and aseg with ribbon
 set cmd="fspython $PYTHON_SCRIPT_DIR/refine_synthSR.py ./synthSR.norm.mgz ./ribbon.mgz ./brain.mgz ./synthSR.mgz"
 $cmd |& tee -a $LogFile
@@ -512,9 +564,11 @@ $cmd |& tee -a $LogFile
 set cmd="mris_anatomical_stats -th3 -mgz -cortex ../label/rh.cortex.label -f ../stats/rh.aparc.DKTatlas.stats -b -a ../label/rh.aparc.DKTatlas.annot -c ../label/aparc.annot.DKTatlas.ctab $SNAME rh white"
 $cmd |& tee -a $LogFile
 
-if ( ! -e $SUBJECTS_DIR/fsaverage) then
-  ln -s $FREESURFER_HOME/subjects/fsaverage $SUBJECTS_DIR/
-endif  
+set cmd = "mri_segstats --seg aseg.mgz  --pv norm.mgz --empty --brainmask brainmask.mgz --brain-vol-from-seg --excl-ctxgmwm --supratent --subcortgray --in norm.mgz --in-intensity-name norm --in-intensity-units MR --etiv --subject $SNAME --surf-wm-vol --surf-ctx-vol --totalgray --euler --ctab $FREESURFER_HOME/ASegStatsLUT.txt  --excludeid 0 --sum ../stats/aseg.stats"
+
+$cmd |& tee -a $LogFile
+
+#ln -s $FREESURFER_HOME/subjects/fsaverage $SUBJECTS_DIR/
 cd ../label
 
 # labels
