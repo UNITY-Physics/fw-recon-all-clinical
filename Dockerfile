@@ -4,7 +4,7 @@ FROM nialljb/freesurfer-centos9:0.0.1
 # Setup environment for Docker image
 ENV HOME=/root/
 ENV FLYWHEEL="/flywheel/v0"
-ENV PYTHONPATH="/flywheel/v0:$PYTHONPATH"
+# ENV PYTHONPATH="/flywheel/v0:$PYTHONPATH"
 WORKDIR $FLYWHEEL
 RUN mkdir -p $FLYWHEEL/input
 
@@ -20,8 +20,7 @@ RUN dnf update -y && \
     dnf install -y tcsh && \
     dnf install -y hostname && \
     dnf install -y zip && \
-    dnf clean all && \
-    apt-get install parallel
+    dnf clean all
 
 RUN pip3 install flywheel-gear-toolkit && \
     pip3 install flywheel-sdk && \
