@@ -1,5 +1,9 @@
 # Changelog
 
+18/05/2026:
+Version 0.4.13:
+- Added a walltime of 6 hours
+
 27/01/2025
 Version 0.4.1
 - Added surface area as output

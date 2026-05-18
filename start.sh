@@ -25,4 +25,4 @@ fi
 # export DISPLAY=:99
 
 # Run the gear
-python3 -u /flywheel/v0/run.py
+timeout --kill-after=60s 6h python3 -u /flywheel/v0/run.py
