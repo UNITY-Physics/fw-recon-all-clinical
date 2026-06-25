@@ -106,7 +106,7 @@ if [[ $recon_all_clinical_exit_status == 0 ]]; then
   cp $WORKDIR/$base_filename/stats/synthseg.vol.csv $WORKDIR/synthseg.vol.csv
   cp $WORKDIR/$base_filename/stats/synthseg.qc.csv $WORKDIR/synthseg.qc.csv
   mri_convert --out_orientation RAS $WORKDIR/$base_filename/mri/synthSR.mgz $WORKDIR/synthSR.nii.gz
-  mri_convert --out_orientation RAS $WORKDIR/$base_filename/mri/aparc+aseg.mgz $WORKDIR/aparc+aseg.nii.gz
+  mri_convert $WORKDIR/$base_filename/mri/aparc+aseg.mgz $WORKDIR/aparc+aseg.nii.gz
   zip -r $OUTPUT_DIR/$base_filename.zip $WORKDIR/$base_filename
 
   export SUBJECTS_DIR=$WORKDIR
